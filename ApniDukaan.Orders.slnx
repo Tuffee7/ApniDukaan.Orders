@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ApniDukaan.Orders.API/ApniDukaan.Orders.API.csproj" />
+  <Project Path="ApniDukaan.Orders.Business/ApniDukaan.Orders.Business.csproj" />
+  <Project Path="ApniDukaan.Orders.Data/ApniDukaan.Orders.Data.csproj" />
+</Solution>
