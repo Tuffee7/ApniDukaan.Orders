@@ -13,8 +13,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["ApniDukaan.Orders.API/ApniDukaan.Orders.API.csproj", "ApniDukaan.Orders.API/"]
-COPY ["ApniDukaan.Orders.Business/ApniDukaan.Orders.Business.csproj", "ApniDukaan.Orders.Business/"]
-COPY ["ApniDukaan.Orders.Data/ApniDukaan.Orders.Data.csproj", "ApniDukaan.Orders.Data/"]
 RUN dotnet restore "./ApniDukaan.Orders.API/ApniDukaan.Orders.API.csproj"
 COPY . .
 WORKDIR "/src/ApniDukaan.Orders.API"
@@ -28,9 +26,9 @@ RUN dotnet publish "./ApniDukaan.Orders.API.csproj" -c $BUILD_CONFIGURATION -o /
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
 WORKDIR /app
-ENV MONGODB_HOST=localhost
-ENV MONGODB_PORT=27017
-ENV MONGODB_DATABASE=OrdersDatabase
+ENV MONGO_HOST=localhost
+ENV MONGO_PORT=27017
+ENV MONGO_DATABASE=OrdersDatabase
 ENV UsersMicroserviceName=localhost
 ENV UsersMicroservicePort=9090
 COPY --from=publish /app/publish .

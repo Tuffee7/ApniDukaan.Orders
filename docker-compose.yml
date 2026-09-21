@@ -1,0 +1,110 @@
+services:
+
+  apnidukaan.orders.api:
+    image: ordersmicroservice.api
+    build:
+      context: .
+      dockerfile: ApniDukaan.Orders.API/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - MONGODB_HOST=mongodb-container
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=OrdersDatabase
+      - UsersMicroserviceName=users-microservice-container
+      - UsersMicroservicePort=5000
+    ports:
+      - "7000:8080"
+    networks:
+      - orders-mongodb-network
+      - apnidukaan-service-network
+    depends_on:
+      - mongodb-container
+      
+
+  mongodb-container:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - ../mongodb-init:/docker-entrypoint-initdb.d
+    networks:
+      - orders-mongodb-network
+
+  mssql-container:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Tuffee27897
+    # LHS host port 1434 is mapped to RHS container port 1433 (default SQL Server port)
+    # Used 1434 on host to avoid conflict with any existing SQL Server instance running on my local host machine
+    ports:
+      - "1434:1433"
+    networks:
+      - productanduser-mssql-network
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Tuffee27897' -C -Q 'SELECT 1' || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  mssql-init:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    restart: "no"
+    networks:
+      - productanduser-mssql-network
+    depends_on:
+      mssql-container:
+        condition: service_healthy
+    volumes:
+      - ../mssql-init:/mssql-init:ro
+    entrypoint: >
+      /bin/bash -c "/opt/mssql-tools18/bin/sqlcmd -S mssql-container -U sa -P 'Tuffee27897' -i /mssql-init/init.sql"
+
+  products-microservice-container:
+    image: products-microservice:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - MSSQL_HOST=mssql-container
+      - MSSQL_PORT=1433
+      - MSSQL_DATABASE=ApniDukaanProducts
+      - MSSQL_USER=sa
+      - MSSQL_PASSWORD=Tuffee27897
+    ports:
+      - "6000:8080"
+    networks:
+      - productanduser-mssql-network
+      - apnidukaan-service-network
+    depends_on:
+      - mssql-init
+
+  users-microservice-container:
+    image: users-microservice:latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - MSSQL_HOST=mssql-container
+      - MSSQL_PORT=1433
+      - MSSQL_DATABASE=ApniDukaanUsers
+      - MSSQL_USER=sa
+      - MSSQL_PASSWORD=Tuffee27897
+    ports:
+      - "5000:8080"
+    networks:
+      - productanduser-mssql-network
+      - apnidukaan-service-network
+    depends_on:
+      - mssql-init
+
+networks:
+  orders-mongodb-network:
+    driver: bridge
+  productanduser-mssql-network:
+    driver: bridge
+  apnidukaan-service-network:
+    driver: bridge
