@@ -13,9 +13,9 @@ namespace ApniDukaan.Orders.Business.HttpClients
             _httpClient = httpClient;
         }
 
-        public async Task<UserDTO?> GetUserByID(Guid userID)
+        public async Task<UserDTO?> GetUserByUserID(Guid userID)
         {
-            HttpResponseMessage response = await _httpClient.GetAsync($"/api/Users/{userID}");
+            HttpResponseMessage response = await _httpClient.GetAsync($"/api/users/{userID}");
 
             if (response.IsSuccessStatusCode)
             {

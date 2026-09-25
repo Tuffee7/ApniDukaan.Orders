@@ -11,7 +11,9 @@ services:
       - MONGODB_PORT=27017
       - MONGODB_DATABASE=OrdersDatabase
       - UsersMicroserviceName=users-microservice-container
-      - UsersMicroservicePort=5000
+      - UsersMicroservicePort=9090
+      - ProductsMicroserviceName=products-microservice-container
+      - ProductsMicroservicePort=8080
     ports:
       - "7000:8080"
     networks:
@@ -34,7 +36,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2025-latest
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=Tuffee27897
+      - MSSQL_SA_PASSWORD=Tuffee@27897
     # LHS host port 1434 is mapped to RHS container port 1433 (default SQL Server port)
     # Used 1434 on host to avoid conflict with any existing SQL Server instance running on my local host machine
     ports:
@@ -45,7 +47,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Tuffee27897' -C -Q 'SELECT 1' || exit 1"
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Tuffee@27897' -C -Q 'SELECT 1' || exit 1"
         ]
       interval: 10s
       timeout: 5s
@@ -61,9 +63,9 @@ services:
       mssql-container:
         condition: service_healthy
     volumes:
-      - ../mssql-init:/mssql-init:ro
+      - ../mssql-init:/mssql-init:rw
     entrypoint: >
-      /bin/bash -c "/opt/mssql-tools18/bin/sqlcmd -S mssql-container -U sa -P 'Tuffee27897' -i /mssql-init/init.sql"
+      /bin/bash -c "/opt/mssql-tools18/bin/sqlcmd -S mssql-container -U sa -P 'Tuffee@27897' -C -i /mssql-init/init.sql"
 
   products-microservice-container:
     image: products-microservice:latest
@@ -74,9 +76,9 @@ services:
       - MSSQL_PORT=1433
       - MSSQL_DATABASE=ApniDukaanProducts
       - MSSQL_USER=sa
-      - MSSQL_PASSWORD=Tuffee27897
+      - MSSQL_PASSWORD=Tuffee@27897
     ports:
-      - "6000:8080"
+      - "6001:8080"
     networks:
       - productanduser-mssql-network
       - apnidukaan-service-network
@@ -90,11 +92,11 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - MSSQL_HOST=mssql-container
       - MSSQL_PORT=1433
-      - MSSQL_DATABASE=ApniDukaanUsers
+      - MSSQL_DATABASE=ApniDukaanApplicationUsers
       - MSSQL_USER=sa
-      - MSSQL_PASSWORD=Tuffee27897
+      - MSSQL_PASSWORD=Tuffee@27897
     ports:
-      - "5000:8080"
+      - "5000:9090"
     networks:
       - productanduser-mssql-network
       - apnidukaan-service-network

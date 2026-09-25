@@ -14,5 +14,7 @@ namespace ApniDukaan.Orders.Business.ResponseDTO
         public decimal TotalBill { get; set; }
 
         public List<OrderItemResponse> OrderItems { get; set; } = new List<OrderItemResponse>();
+        public string? UserPersonName { get; set; }
+        public string? Email { get; set; }
     }
 }
