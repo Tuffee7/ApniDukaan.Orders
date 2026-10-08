@@ -17,32 +17,39 @@ namespace ApniDukaan.Orders.Business.HttpClients
         {
             HttpResponseMessage response = await _httpClient.GetAsync($"/api/users/{userID}");
 
-            if (response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
-                UserDTO? user = await response.Content.ReadFromJsonAsync<UserDTO>();
-
-                if (user == null)
-                {
-                    throw new Exception($"User with ID {userID} not found in the response.");
-                }
-
-                return user;
-            }
-            else
-            {
-                if (response.StatusCode == HttpStatusCode.NotFound)
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     return null;
                 }
-                else if (response.StatusCode == HttpStatusCode.BadRequest)
+                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
                 {
-                    throw new HttpRequestException($"Bad request when fetching user with ID {userID}.", null, response.StatusCode);
+                    throw new HttpRequestException("Bad request", null, System.Net.HttpStatusCode.BadRequest);
                 }
                 else
                 {
-                    throw new HttpRequestException($"Error fetching user with ID {userID}. Status code: {response.StatusCode}", null, response.StatusCode);
+                    //throw new HttpRequestException($"Http request failed with status code {response.StatusCode}");
+
+                    return new UserDTO
+                    {
+                        UserID = Guid.Empty,
+                        Email = "Temporarily Unavailable",
+                        PersonName = "Temporarily Unavailable",
+                        Gender = "Temporarily Unavailable"
+                    };
                 }
             }
+
+
+            UserDTO? user = await response.Content.ReadFromJsonAsync<UserDTO>();
+
+            if (user == null)
+            {
+                throw new ArgumentException("Invalid User ID");
+            }
+
+            return user;
 
         }
     }

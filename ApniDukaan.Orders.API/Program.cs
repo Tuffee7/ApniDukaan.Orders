@@ -1,8 +1,10 @@
 using ApniDukaan.Orders.API.Middleware;
 using ApniDukaan.Orders.Business;
 using ApniDukaan.Orders.Business.HttpClients;
+using ApniDukaan.Orders.Business.Policies;
 using ApniDukaan.Orders.DataAccessLayer;
 using FluentValidation.AspNetCore;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,11 +32,13 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddTransient<IUsersMicroservicePolicies, UsersMicroservicePolicies>();
+
 // Http Client service
 builder.Services.AddHttpClient<UsersMicroserviceClient>(client =>
 {
     client.BaseAddress = new Uri($"http://{builder.Configuration["UsersMicroserviceName"]}:{builder.Configuration["UsersMicroservicePort"]}");
-});
+}).AddPolicyHandler(builder.Services.BuildServiceProvider().GetRequiredService<IUsersMicroservicePolicies>().GetRetryPolicy());
 
 builder.Services.AddHttpClient<ProductsMicroserviceClient>(client =>
 {
