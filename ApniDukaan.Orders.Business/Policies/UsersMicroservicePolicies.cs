@@ -1,27 +1,32 @@
 ﻿using Microsoft.Extensions.Logging;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
+using Polly.Timeout;
+using Polly.Wrap;
 
 namespace ApniDukaan.Orders.Business.Policies
 {
     public class UsersMicroservicePolicies : IUsersMicroservicePolicies
     {
         public readonly ILogger<UsersMicroservicePolicies> _logger;
-        public UsersMicroservicePolicies(ILogger<UsersMicroservicePolicies> logger)
+        public readonly IPollyPolicies _pollyPolicies;
+
+        public UsersMicroservicePolicies(ILogger<UsersMicroservicePolicies> logger, IPollyPolicies pollyPolicies)
         {
             _logger = logger;
+            _pollyPolicies = pollyPolicies;
         }
 
-        public IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+        public IAsyncPolicy<HttpResponseMessage> GetCombinedPolicy()
         {
-            AsyncRetryPolicy<HttpResponseMessage> policy = Policy.HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-                    .WaitAndRetryAsync(retryCount: 3, sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                    onRetry: (outcome, timespan, retryAttempt, context) =>
-                    {
-                        _logger.LogInformation($"Retry {retryAttempt} after {timespan.TotalSeconds} seconds");
-                    });
+            var retryPolicy = _pollyPolicies.GetRetryPolicy(5);
+            var circuitBreakerPolicy = _pollyPolicies.GetCircuitBreakerPolicy(3, TimeSpan.FromMinutes(2));
+            var timeoutPolicy = _pollyPolicies.GetTimeoutPolicy(TimeSpan.FromSeconds(100));
 
-            return policy;
+            AsyncPolicyWrap<HttpResponseMessage> combinedPolicy = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy, timeoutPolicy);
+
+            return combinedPolicy;
         }
     }
 }

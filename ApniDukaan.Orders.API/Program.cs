@@ -4,7 +4,6 @@ using ApniDukaan.Orders.Business.HttpClients;
 using ApniDukaan.Orders.Business.Policies;
 using ApniDukaan.Orders.DataAccessLayer;
 using FluentValidation.AspNetCore;
-using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,21 +32,25 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddTransient<IUsersMicroservicePolicies, UsersMicroservicePolicies>();
+builder.Services.AddTransient<IProductsMicroservicePolicies, ProductsMicroservicePolicies>();
+builder.Services.AddTransient<IPollyPolicies, PollyPolicies>();
 
 // Http Client service
 builder.Services.AddHttpClient<UsersMicroserviceClient>(client =>
 {
     client.BaseAddress = new Uri($"http://{builder.Configuration["UsersMicroserviceName"]}:{builder.Configuration["UsersMicroservicePort"]}");
-}).AddPolicyHandler(builder.Services.BuildServiceProvider().GetRequiredService<IUsersMicroservicePolicies>().GetRetryPolicy());
+}).AddPolicyHandler(builder.Services.BuildServiceProvider().GetRequiredService<IUsersMicroservicePolicies>().GetCombinedPolicy());
 
 builder.Services.AddHttpClient<ProductsMicroserviceClient>(client =>
 {
     client.BaseAddress = new Uri($"http://{builder.Configuration["ProductsMicroserviceName"]}:{builder.Configuration["ProductsMicroservicePort"]}");
-});
+}).AddPolicyHandler(builder.Services.BuildServiceProvider().GetRequiredService<IProductsMicroservicePolicies>().GetCombinedPolicy());
+
 
 
 var app = builder.Build();
 
+// app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseExceptionHandlingMiddleware();
 app.UseRouting();
 

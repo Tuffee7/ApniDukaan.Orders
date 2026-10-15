@@ -103,6 +103,16 @@ services:
     depends_on:
       - mssql-init
 
+  redis-container:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - E:/Study/ApniDukaan/redis-cache:/data
+     #- ../redis-cache:/data
+    networks:
+      - apnidukaan-service-network
+
 networks:
   orders-mongodb-network:
     driver: bridge

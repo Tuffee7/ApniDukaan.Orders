@@ -1,4 +1,7 @@
 ﻿using ApniDukaan.Orders.Business.ResponseDTO;
+using Microsoft.Extensions.Logging;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -7,50 +10,69 @@ namespace ApniDukaan.Orders.Business.HttpClients
     public class UsersMicroserviceClient
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<UsersMicroserviceClient> _logger;
 
-        public UsersMicroserviceClient(HttpClient httpClient)
+        public UsersMicroserviceClient(HttpClient httpClient, ILogger<UsersMicroserviceClient> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
         }
 
         public async Task<UserDTO?> GetUserByUserID(Guid userID)
         {
-            HttpResponseMessage response = await _httpClient.GetAsync($"/api/users/{userID}");
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    return null;
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                {
-                    throw new HttpRequestException("Bad request", null, System.Net.HttpStatusCode.BadRequest);
-                }
-                else
-                {
-                    //throw new HttpRequestException($"Http request failed with status code {response.StatusCode}");
 
-                    return new UserDTO
+                HttpResponseMessage response = await _httpClient.GetAsync($"/api/users/{userID}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
-                        UserID = Guid.Empty,
-                        Email = "Temporarily Unavailable",
-                        PersonName = "Temporarily Unavailable",
-                        Gender = "Temporarily Unavailable"
-                    };
+                        return null;
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                    {
+                        throw new HttpRequestException("Bad request", null, System.Net.HttpStatusCode.BadRequest);
+                    }
+                    else
+                    {
+                        //throw new HttpRequestException($"Http request failed with status code {response.StatusCode}");
+                    }
                 }
+
+                UserDTO? user = await response.Content.ReadFromJsonAsync<UserDTO>();
+
+                if (user == null)
+                {
+                    throw new ArgumentException("Invalid User ID");
+                }
+                return user;
             }
-
-
-            UserDTO? user = await response.Content.ReadFromJsonAsync<UserDTO>();
-
-            if (user == null)
+            catch (BrokenCircuitException ex)
             {
-                throw new ArgumentException("Invalid User ID");
+                _logger.LogError(ex, "Request failed because Circuit Breaker is open. Users microservice is temporarily unavailable. Returning Dummy Data");
+
+                return new UserDTO
+                {
+                    UserID = Guid.Empty,
+                    Email = "Temporarily Unavailable (Circuit Breaker)",
+                    PersonName = "Temporarily Unavailable (Circuit Breaker)",
+                    Gender = "Temporarily Unavailable (Circuit Breaker)"
+                };
             }
+            catch (TimeoutRejectedException ex)
+            {
+                _logger.LogError(ex, "Request failed due to timeout. Users microservice is temporarily unavailable. Returning Dummy Data");
 
-            return user;
-
+                return new UserDTO
+                {
+                    UserID = Guid.Empty,
+                    Email = "Temporarily Unavailable (timeout)",
+                    PersonName = "Temporarily Unavailable (timeout)",
+                    Gender = "Temporarily Unavailable (timeout)"
+                };
+            }
         }
     }
 }

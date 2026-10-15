@@ -1,4 +1,6 @@
 ﻿using ApniDukaan.Orders.Business.ResponseDTO;
+using Microsoft.Extensions.Logging;
+using Polly.Bulkhead;
 using System.Net;
 using System.Net.Http.Json;
 
@@ -7,43 +9,59 @@ namespace ApniDukaan.Orders.Business.HttpClients
     public class ProductsMicroserviceClient
     {
         private readonly HttpClient _httpClient;
+        private readonly ILogger<ProductsMicroserviceClient> _logger;
 
-        public ProductsMicroserviceClient(HttpClient httpClient)
+        public ProductsMicroserviceClient(HttpClient httpClient, ILogger<ProductsMicroserviceClient> logger)
         {
             _httpClient = httpClient;
+            _logger = logger;
         }
 
         public async Task<ProductDTO?> GetProductByProductID(Guid productID)
         {
-            HttpResponseMessage response = await _httpClient.GetAsync($"/api/products/search/product-id/{productID}");
-
-            if (response.IsSuccessStatusCode)
+            try
             {
+                HttpResponseMessage response = await _httpClient.GetAsync($"/api/products/search/product-id/{productID}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        return null;
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                    {
+                        throw new HttpRequestException("Bad request", null, System.Net.HttpStatusCode.BadRequest);
+                    }
+                    else
+                    {
+                        throw new HttpRequestException($"Http request failed with status code {response.StatusCode}");
+                    }
+                }
+
+
                 ProductDTO? product = await response.Content.ReadFromJsonAsync<ProductDTO>();
 
                 if (product == null)
                 {
-                    throw new Exception($"Product with ID {productID} not found in the response.");
+                    throw new ArgumentException("Invalid Product ID");
                 }
 
                 return product;
             }
-            else
+            catch (BulkheadRejectedException ex)
             {
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    return null;
-                }
-                else if (response.StatusCode == HttpStatusCode.BadRequest)
-                {
-                    throw new HttpRequestException($"Bad request when fetching product with ID {productID}.", null, response.StatusCode);
-                }
-                else
-                {
-                    throw new HttpRequestException($"Error fetching product with ID {productID}. Status code: {response.StatusCode}", null, response.StatusCode);
-                }
-            }
+                _logger.LogError(ex, "Bulkhead isolation blocks the request since the request queue is full");
 
+                return new ProductDTO
+                {
+                    ProductID = Guid.Empty,
+                    ProductName = "Temporarily Unavailable (Bulkhead)",
+                    Category = "Temporarily Unavailable (Bulkhead)",
+                    Price = 0,
+                    QuantityInStock = 0
+                };
+            }
         }
     }
 }
