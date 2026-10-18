@@ -62,7 +62,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 // Auth
-app.UseHttpsRedirection();
+// Disable this when the service exposes HTTP only inside Docker.
+// app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -21,8 +21,8 @@ namespace ApniDukaan.Orders.Business.Policies
         public IAsyncPolicy<HttpResponseMessage> GetCombinedPolicy()
         {
             var retryPolicy = _pollyPolicies.GetRetryPolicy(5);
-            var circuitBreakerPolicy = _pollyPolicies.GetCircuitBreakerPolicy(3, TimeSpan.FromMinutes(2));
-            var timeoutPolicy = _pollyPolicies.GetTimeoutPolicy(TimeSpan.FromSeconds(100));
+            var circuitBreakerPolicy = _pollyPolicies.GetCircuitBreakerPolicy(3, TimeSpan.FromMinutes(3));
+            var timeoutPolicy = _pollyPolicies.GetTimeoutPolicy(TimeSpan.FromSeconds(200));
 
             AsyncPolicyWrap<HttpResponseMessage> combinedPolicy = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy, timeoutPolicy);
 

@@ -10,9 +10,9 @@ services:
       - MONGODB_HOST=mongodb-container
       - MONGODB_PORT=27017
       - MONGODB_DATABASE=OrdersDatabase
-      - UsersMicroserviceName=users-microservice-container
-      - UsersMicroservicePort=9090
-      - ProductsMicroserviceName=products-microservice-container
+      - UsersMicroserviceName=api-gateway-container
+      - UsersMicroservicePort=8080
+      - ProductsMicroserviceName=api-gateway-container
       - ProductsMicroservicePort=8080
       - REDIS_HOST=redis-container
       - REDIS_PORT=6379
@@ -114,6 +114,18 @@ services:
      #- ../redis-cache:/data
     networks:
       - apnidukaan-service-network
+  
+  api-gateway-container:
+    image: api-gateway
+    build:
+      context: .
+      dockerfile: ApiGateway/Dockerfile
+    ports:
+      - "4000:8080"
+    networks:
+      - apnidukaan-service-network
+    depends_on:
+      - apnidukaan.orders.api
 
 networks:
   orders-mongodb-network:

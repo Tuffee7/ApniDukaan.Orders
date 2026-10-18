@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="ApiGateway/ApiGateway.csproj" Id="d428b677-3a71-4f88-8942-25d605be172a" />
   <Project Path="ApniDukaan.Orders.API/ApniDukaan.Orders.API.csproj" />
   <Project Path="ApniDukaan.Orders.Business/ApniDukaan.Orders.Business.csproj" />
   <Project Path="ApniDukaan.Orders.Data/ApniDukaan.Orders.Data.csproj" />
